@@ -1,0 +1,23 @@
+# Python
+venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+backend/printers.db
+backend/uvicorn.log
+
+# Node / Angular
+node_modules/
+dist/
+.angular/
+frontend/ng.log
+
+# IDEs and OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Environments
+.env
+.env.*

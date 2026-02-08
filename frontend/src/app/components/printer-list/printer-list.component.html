@@ -1,0 +1,161 @@
+<div class="container fade-in">
+  <div class="header">
+    <h1>PrintControl</h1>
+    <div class="header-actions">
+      <div class="search-bar">
+        <span class="search-icon">🔍</span>
+        <input type="text" [(ngModel)]="searchTerm" placeholder="Search printers...">
+      </div>
+      <div class="view-toggle">
+        <button class="icon-btn" [class.active]="viewMode === 'grid'" (click)="setViewMode('grid')" title="Grid View">
+          📱
+        </button>
+        <button class="icon-btn" [class.active]="viewMode === 'list'" (click)="setViewMode('list')" title="List View">
+          ☰
+        </button>
+      </div>
+      <a routerLink="/settings" class="icon-btn" title="Settings">⚙️</a>
+      <button class="btn-primary" (click)="openAddModal()">+ Add Printer</button>
+    </div>
+  </div>
+
+  <div class="glass-panel" *ngIf="isLoading && !printers.length">
+    <div class="loading">Loading printers...</div>
+  </div>
+
+  <!-- GRID VIEW -->
+  <div class="grid" *ngIf="!isLoading && viewMode === 'grid'">
+    <div *ngFor="let printer of filteredPrinters" class="card glass-panel">
+      <div class="card-header">
+        <div class="status-indicator" [ngClass]="printer.status.toLowerCase()"></div>
+        <h3>{{ printer.name }}</h3>
+        <div class="actions">
+          <button class="icon-btn" (click)="startEdit(printer)" title="Edit">✏️</button>
+          <button class="icon-btn danger" (click)="deletePrinter(printer.id)" title="Delete">🗑️</button>
+        </div>
+      </div>
+
+      <div class="card-body">
+        <div class="info-row">
+          <span class="label">IP:</span> <span class="value">{{ printer.ip_address }}</span>
+        </div>
+        <div class="info-row">
+          <span class="label">Model:</span> <span class="value">{{ printer.model || 'Unknown' }}</span>
+        </div>
+        <div class="info-row">
+          <span class="label">Location:</span> <span class="value">{{ printer.location || 'Unknown' }}</span>
+        </div>
+        <div class="info-row">
+          <span class="label">Status:</span> <span class="value">{{ printer.status }}</span>
+        </div>
+        <div class="info-row" *ngIf="printer.printer_type_id">
+          <span class="label">Type:</span>
+          <span class="value">{{ getPrinterTypeName(printer) }}</span>
+        </div>
+      </div>
+
+      <div class="card-footer">
+        <button class="btn-scan" (click)="scanPrinter(printer, 'snmp')">Scan SNMP</button>
+        <button class="btn-scan" (click)="scanPrinter(printer, 'web')">Scan Web</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- LIST VIEW -->
+  <div class="list-view" *ngIf="!isLoading && viewMode === 'list'">
+    <div class="glass-panel">
+      <table>
+        <thead>
+          <tr>
+            <th>Status</th>
+            <th>Name</th>
+            <th>IP Address</th>
+            <th>Model</th>
+            <th>Location</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let printer of filteredPrinters">
+            <td>
+              <div class="status-indicator" [ngClass]="printer.status.toLowerCase()"></div>
+            </td>
+            <td>{{ printer.name }}</td>
+            <td>{{ printer.ip_address }}</td>
+            <td>{{ printer.model || 'Unknown' }}</td>
+            <td>{{ printer.location || 'Unknown' }}</td>
+            <td class="list-actions">
+              <button class="icon-btn" (click)="scanPrinter(printer, 'snmp')" title="Scan SNMP">📟</button>
+              <button class="icon-btn" (click)="scanPrinter(printer, 'web')" title="Scan Web">🌐</button>
+              <button class="icon-btn" (click)="startEdit(printer)" title="Edit">✏️</button>
+              <button class="icon-btn danger" (click)="deletePrinter(printer.id)" title="Delete">🗑️</button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div *ngIf="!isLoading && filteredPrinters.length === 0" class="empty-state">
+    <p>No printers found matching "{{ searchTerm }}"</p>
+  </div>
+
+  <!-- Edit/Add Modal -->
+  <div class="modal-overlay" *ngIf="showAddModal || editingPrinter">
+    <div class="modal glass-panel">
+      <h2>{{ editingPrinter ? 'Edit Printer' : 'Add Printer' }}</h2>
+
+      <div class="form-group">
+        <label>Name (Hostname)</label>
+        <div style="display: flex; gap: 10px;">
+          <input [(ngModel)]="activePrinter.name" placeholder="Printer Name" style="flex: 1;">
+          <button class="btn-dns" (click)="resolveDNS()" [disabled]="!activePrinter.name || isResolving">
+            {{ isResolving ? '...' : 'Resolve DNS' }}
+          </button>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>IP Address</label>
+        <div style="display: flex; gap: 10px;">
+          <input [(ngModel)]="activePrinter.ip_address" placeholder="192.168.1.100" style="flex: 1;">
+          <button class="btn-secondary" (click)="detect()" [disabled]="!activePrinter.ip_address || isDetecting">
+            {{ isDetecting ? '...' : 'Detect' }}
+          </button>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Model</label>
+        <input [(ngModel)]="activePrinter.model" placeholder="Model">
+      </div>
+
+      <div class="form-group">
+        <label>Location</label>
+        <input [(ngModel)]="activePrinter.location" placeholder="Location">
+      </div>
+
+      <!-- Master Data Selection -->
+      <div class="form-group">
+        <label>Vendor (Optional)</label>
+        <select [(ngModel)]="selectedVendorId" (ngModelChange)="onVendorChange($event)">
+          <option [ngValue]="undefined">Select Vendor</option>
+          <option *ngFor="let v of vendors" [value]="v.id">{{ v.name }}</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label>Printer Type</label>
+        <select [(ngModel)]="activePrinter.printer_type_id" [disabled]="!filteredPrinterTypes.length">
+          <option [ngValue]="undefined">Select Type</option>
+          <option *ngFor="let t of filteredPrinterTypes" [value]="t.id">{{ t.name }} ({{ t.protocol }})</option>
+        </select>
+      </div>
+
+      <div class="modal-actions">
+        <button class="btn-secondary" (click)="editingPrinter ? cancelEdit() : closeAddModal()">Cancel</button>
+        <button class="btn-primary" (click)="editingPrinter ? saveEdit() : createPrinter()">Save</button>
+      </div>
+    </div>
+  </div>
+</div>

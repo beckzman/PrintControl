@@ -1,0 +1,126 @@
+<div class="container fade-in">
+    <div class="header">
+        <div class="header-left">
+            <a href="javascript:void(0)" (click)="goBack()" class="back-link">
+                <span class="back-icon">←</span> Back to Printers
+            </a>
+            <h1>Settings</h1>
+        </div>
+    </div>
+
+    <div class="glass-panel main-panel">
+        <div class="tabs">
+            <button class="tab-btn" [class.active]="activeTab === 'vendors'"
+                (click)="setActiveTab('vendors')">Vendors</button>
+            <button class="tab-btn" [class.active]="activeTab === 'printer-types'"
+                (click)="setActiveTab('printer-types')">Printer Types</button>
+        </div>
+
+        <!-- VENDORS TAB -->
+        <div *ngIf="activeTab === 'vendors'" class="tab-content fade-in">
+            <div class="section-header">
+                <h2>Manage Vendors</h2>
+            </div>
+
+            <div class="form-row">
+                <input [(ngModel)]="newVendorName" placeholder="New Vendor Name" class="input-field">
+                <button class="btn-primary" (click)="createVendor()">Add Vendor</button>
+            </div>
+
+            <div class="list-container">
+                <div *ngFor="let vendor of vendors" class="list-item glass-panel"
+                    [class.editing]="editingVendorId === vendor.id">
+                    <!-- Display Mode -->
+                    <ng-container *ngIf="editingVendorId !== vendor.id">
+                        <div class="item-content">
+                            <span class="item-name">{{ vendor.name }}</span>
+                            <span class="item-id">ID: {{ vendor.id }}</span>
+                        </div>
+                        <div class="item-actions">
+                            <button class="icon-btn xs" (click)="startEditVendor(vendor)" title="Edit">✏️</button>
+                            <button class="icon-btn xs danger" (click)="deleteVendor(vendor.id)"
+                                title="Delete">🗑️</button>
+                        </div>
+                    </ng-container>
+
+                    <!-- Edit Mode -->
+                    <ng-container *ngIf="editingVendorId === vendor.id">
+                        <div class="edit-row">
+                            <input [(ngModel)]="editVendorName" class="input-field">
+                            <div class="item-actions">
+                                <button class="icon-btn xs success" (click)="saveEditVendor(vendor.id)"
+                                    title="Save">✅</button>
+                                <button class="icon-btn xs" (click)="cancelEditVendor()" title="Cancel">❌</button>
+                            </div>
+                        </div>
+                    </ng-container>
+                </div>
+            </div>
+        </div>
+
+        <!-- PRINTER TYPES TAB -->
+        <div *ngIf="activeTab === 'printer-types'" class="tab-content fade-in">
+            <div class="section-header">
+                <h2>Manage Printer Types</h2>
+            </div>
+
+            <!-- Printer Type Form (Add/Edit) -->
+            <div class="form-grid glass-panel edit-panel" [class.editing-mode]="editingTypeId !== null">
+                <div class="form-title" *ngIf="editingTypeId">✏️ Editing Printer Type (ID: {{ editingTypeId }})</div>
+                <div class="form-title" *ngIf="!editingTypeId">➕ Add New Printer Type</div>
+
+                <div class="form-group vendor-select">
+                    <label>Vendor</label>
+                    <select [(ngModel)]="newPrinterType.vendor_id" class="input-field">
+                        <option [ngValue]="undefined" disabled selected>Select Vendor</option>
+                        <option *ngFor="let v of vendors" [value]="v.id">{{ v.name }}</option>
+                    </select>
+                </div>
+
+                <div class="form-group model-input">
+                    <label>Model Name</label>
+                    <input [(ngModel)]="newPrinterType.name" placeholder="e.g. LaserJet 400" class="input-field">
+                </div>
+
+                <div class="form-group protocol-select">
+                    <label>Protocol</label>
+                    <select [(ngModel)]="newPrinterType.protocol" class="input-field">
+                        <option value="SNMP">SNMP</option>
+                        <option value="WEB">WEB</option>
+                    </select>
+                </div>
+
+                <div class="form-group full-width">
+                    <label>Discovery Config (JSON)</label>
+                    <textarea [(ngModel)]="newPrinterType.discovery_config" rows="5" class="input-field mono"
+                        placeholder='{"oid": "1.3.6..."}'></textarea>
+                    <div class="error-msg" *ngIf="configError">{{ configError }}</div>
+                </div>
+
+                <div class="form-actions full-width">
+                    <button class="btn-primary" (click)="handlePrinterTypeSubmit()">{{ submitButtonText }}</button>
+                    <button class="btn-secondary" *ngIf="editingTypeId" (click)="cancelEdit()">Cancel Edit</button>
+                </div>
+            </div>
+
+            <div class="list-container">
+                <div class="list-header">Existing Types</div>
+                <div *ngFor="let type of printerTypes" class="list-item glass-panel"
+                    [class.active-edit]="editingTypeId === type.id">
+                    <div class="item-main">
+                        <span class="item-name">{{ type.name }}</span>
+                        <span class="item-vendor" *ngIf="type.vendor">({{ type.vendor.name }})</span>
+                    </div>
+                    <div class="item-details">
+                        <span class="badge" [ngClass]="type.protocol.toLowerCase()">{{ type.protocol }}</span>
+                        <div class="item-actions">
+                            <button class="icon-btn xs" (click)="startEditPrinterType(type)" title="Edit">✏️</button>
+                            <button class="icon-btn xs danger" (click)="deletePrinterType(type.id)"
+                                title="Delete">🗑️</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
