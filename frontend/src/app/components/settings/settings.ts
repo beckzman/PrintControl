@@ -12,7 +12,7 @@ import { MasterDataService, Vendor, PrinterType } from '../../services/master-da
   styleUrls: ['./settings.css']
 })
 export class Settings implements OnInit {
-  activeTab: 'vendors' | 'printer-types' = 'vendors';
+  activeTab: 'printer-types' = 'printer-types';
   vendors: Vendor[] = [];
   printerTypes: PrinterType[] = [];
 
@@ -25,9 +25,14 @@ export class Settings implements OnInit {
 
   // Printer Type Form
   newPrinterType: Partial<PrinterType> = {
-    protocol: 'SNMP',
+    probes: ['ping', 'snmp'],
     discovery_config: '{}'
   };
+  availableProbes = [
+    { id: 'ping', label: 'Ping (Basic)' },
+    { id: 'snmp', label: 'SNMP (Detailed)' },
+    { id: 'web', label: 'Web Crawl' }
+  ];
   configError = '';
 
   // Printer Type Editing
@@ -52,7 +57,7 @@ export class Settings implements OnInit {
     this.masterDataService.getPrinterTypes().subscribe(data => this.printerTypes = data);
   }
 
-  setActiveTab(tab: 'vendors' | 'printer-types'): void {
+  setActiveTab(tab: 'printer-types'): void {
     this.activeTab = tab;
     this.cancelEdit();
   }
@@ -109,7 +114,7 @@ export class Settings implements OnInit {
     this.newPrinterType = {
       vendor_id: type.vendor_id,
       name: type.name,
-      protocol: type.protocol,
+      probes: type.probes || [],
       discovery_config: JSON.stringify(type.discovery_config, null, 2) // Pretty print for editing
     };
     // Scroll to top to see form
@@ -119,7 +124,7 @@ export class Settings implements OnInit {
   cancelEdit(): void {
     this.editingTypeId = null;
     this.submitButtonText = 'Add Printer Type';
-    this.newPrinterType = { protocol: 'SNMP', discovery_config: '{}' };
+    this.newPrinterType = { probes: ['ping', 'snmp'], discovery_config: '{}' };
     this.configError = '';
   }
 
@@ -191,5 +196,20 @@ export class Settings implements OnInit {
       },
       error: (err) => alert('Failed to delete printer type: ' + JSON.stringify(err))
     });
+  }
+
+  isProbeEnabled(probeId: string): boolean {
+    return (this.newPrinterType.probes || []).includes(probeId);
+  }
+
+  toggleProbe(probeId: string): void {
+    const probes = [...(this.newPrinterType.probes || [])];
+    const index = probes.indexOf(probeId);
+    if (index > -1) {
+      probes.splice(index, 1);
+    } else {
+      probes.push(probeId);
+    }
+    this.newPrinterType.probes = probes;
   }
 }

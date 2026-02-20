@@ -11,7 +11,7 @@ export interface PrinterType {
   id: number;
   vendor_id: number;
   name: string;
-  protocol: 'SNMP' | 'WEB';
+  probes: string[];
   discovery_config: any;
   vendor?: Vendor;
 }
@@ -20,7 +20,7 @@ export interface PrinterType {
   providedIn: 'root'
 })
 export class MasterDataService {
-  private apiUrl = 'http://localhost:8001'; // Using 8001 as backend port
+  private apiUrl = 'http://127.0.0.1:8000'; // Using 127.0.0.1 as backend port
 
   constructor(private http: HttpClient) { }
 

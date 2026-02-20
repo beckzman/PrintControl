@@ -4,6 +4,22 @@
     margin: 0 auto;
 }
 
+.fade-in {
+    animation: fadeIn 0.5s ease-out;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
 .header {
     display: flex;
     justify-content: space-between;
@@ -69,6 +85,23 @@ h1 {
     box-shadow: 0 0 10px #f87171;
 }
 
+.status-indicator:hover {
+    transform: scale(1.5);
+    cursor: help;
+    z-index: 10;
+}
+
+.status-indicator.online:hover,
+.status-indicator.ready:hover,
+.status-indicator.printing:hover {
+    box-shadow: 0 0 15px #4ade80, 0 0 25px rgba(74, 222, 128, 0.5);
+}
+
+.status-indicator.offline:hover,
+.status-indicator.error:hover {
+    box-shadow: 0 0 15px #f87171, 0 0 25px rgba(248, 113, 113, 0.5);
+}
+
 .card-header h3 {
     margin: 0;
     flex-grow: 1;
@@ -84,6 +117,12 @@ h1 {
 
 .label {
     color: #94a3b8;
+}
+
+.value.mismatch {
+    color: #f87171;
+    font-weight: bold;
+    text-decoration: underline dotted;
 }
 
 .card-footer {
@@ -311,9 +350,151 @@ h1 {
     gap: 0.5rem;
 }
 
+.mismatch-text {
+    color: #f87171;
+    font-weight: bold;
+}
+
+/* LOG MODAL STYLES */
+.log-modal {
+    max-width: 600px;
+    width: 90%;
+}
+
+.log-container {
+    max-height: 400px;
+    overflow-y: auto;
+    padding-right: 0.5rem;
+}
+
+.log-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.log-item {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 8px;
+    padding: 0.75rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.log-time {
+    font-size: 0.75rem;
+    color: #94a3b8;
+}
+
+.log-type {
+    font-weight: bold;
+    color: #60a5fa;
+    text-transform: capitalize;
+    margin-right: 0.5rem;
+}
+
+.log-msg {
+    font-size: 0.9rem;
+}
+
+.log-values {
+    margin-top: 0.25rem;
+    font-size: 0.8rem;
+    background: rgba(0, 0, 0, 0.2);
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    display: inline-block;
+}
+
+.old {
+    color: #f87171;
+    text-decoration: line-through;
+}
+
+.new {
+    color: #4ade80;
+    font-weight: bold;
+}
+
+.empty-logs {
+    text-align: center;
+    color: #94a3b8;
+    padding: 2rem;
+}
+
 .empty-state {
     text-align: center;
     padding: 3rem;
     color: #94a3b8;
     font-size: 1.2rem;
+}
+
+.crawl-modal {
+    max-width: 90vw;
+    width: 1000px;
+}
+
+.crawl-content {
+    background: rgba(0, 0, 0, 0.3);
+    padding: 15px;
+    border-radius: 8px;
+    max-height: 60vh;
+    overflow-y: auto;
+    font-size: 11px;
+    white-space: pre-wrap;
+    word-break: break-all;
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    color: #e0e0e0;
+}
+
+/* Notification Container */
+.notification-container {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 2000;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    pointer-events: none;
+}
+
+.notification-toast {
+    padding: 12px 24px;
+    border-radius: 8px;
+    color: white;
+    font-weight: 500;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+    animation: slideIn 0.3s ease-out;
+    pointer-events: auto;
+    min-width: 250px;
+    border-left: 4px solid rgba(255, 255, 255, 0.3);
+}
+
+.notification-toast.success {
+    background: linear-gradient(135deg, #10b981, #059669);
+    border-left-color: #064e3b;
+}
+
+.notification-toast.error {
+    background: linear-gradient(135deg, #ef4444, #dc2626);
+    border-left-color: #7f1d1d;
+}
+
+.notification-toast.info {
+    background: linear-gradient(135deg, #3b82f6, #2563eb);
+    border-left-color: #1e3a8a;
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateX(50px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
 }

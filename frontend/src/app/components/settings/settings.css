@@ -259,12 +259,52 @@ h1 {
     letter-spacing: 0.5px;
 }
 
+.badge.ping {
+    background: #10b981;
+}
+
 .badge.snmp {
-    background: rgba(74, 144, 226, 0.2);
-    color: #4A90E2;
+    background: #3b82f6;
 }
 
 .badge.web {
+    background: #8b5cf6;
+}
+
+.probe-checkboxes {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1.5rem;
+    padding: 0.5rem;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 8px;
+}
+
+.checkbox-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+    font-size: 0.9rem;
+    color: #e2e8f0;
+}
+
+.checkbox-item input {
+    width: 1.2rem;
+    height: 1.2rem;
+    cursor: pointer;
+}
+
+.probe-badges {
+    display: flex;
+    gap: 0.4rem;
+}
+
+.form-group.full-width {
+    grid-column: 1 / -1;
+}
+
+.form-actions.full-width {
     background: rgba(46, 204, 113, 0.2);
     color: #2ECC71;
 }

@@ -7,5 +7,15 @@ export interface Printer {
     status: string;
     last_updated?: Date;
     printer_type_id?: number;
-    printer_type?: any; // Optional: Import PrinterType if needed, or use any to avoid circular dependency
+    printer_type?: any;
+    last_protocol?: string;
+    sys_location?: string;
+    sys_description?: string;
+    last_web_crawl?: { content: string, timestamp: string };
+    resolved_ip?: string; // Cache for DNS comparison
+}
+
+export interface ScanResponse {
+    printer: Printer;
+    reached: boolean;
 }

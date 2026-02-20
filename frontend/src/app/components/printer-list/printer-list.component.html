@@ -1,4 +1,10 @@
 <div class="container fade-in">
+  <!-- Notifications Container -->
+  <div class="notification-container">
+    <div *ngFor="let note of notifications" class="notification-toast" [ngClass]="note.type">
+      {{ note.message }}
+    </div>
+  </div>
   <div class="header">
     <h1>PrintControl</h1>
     <div class="header-actions">
@@ -27,9 +33,11 @@
   <div class="grid" *ngIf="!isLoading && viewMode === 'grid'">
     <div *ngFor="let printer of filteredPrinters" class="card glass-panel">
       <div class="card-header">
-        <div class="status-indicator" [ngClass]="printer.status.toLowerCase()"></div>
+        <div class="status-indicator" [ngClass]="printer.status.toLowerCase()" [title]="getStatusTooltip(printer)">
+        </div>
         <h3>{{ printer.name }}</h3>
         <div class="actions">
+          <button class="icon-btn" (click)="viewLogs(printer)" title="History">📜</button>
           <button class="icon-btn" (click)="startEdit(printer)" title="Edit">✏️</button>
           <button class="icon-btn danger" (click)="deletePrinter(printer.id)" title="Delete">🗑️</button>
         </div>
@@ -37,13 +45,20 @@
 
       <div class="card-body">
         <div class="info-row">
-          <span class="label">IP:</span> <span class="value">{{ printer.ip_address }}</span>
+          <span class="label">IP:</span>
+          <span class="value" [class.mismatch]="isDnsMismatch(printer)"
+            [title]="isDnsMismatch(printer) ? 'DNS resolves to ' + printer.resolved_ip : ''">
+            {{ printer.ip_address }}
+          </span>
         </div>
         <div class="info-row">
-          <span class="label">Model:</span> <span class="value">{{ printer.model || 'Unknown' }}</span>
+          <span class="label">Model:</span> <span class="value" [title]="printer.sys_description || ''">{{ printer.model
+            || 'Unknown' }}</span>
         </div>
         <div class="info-row">
-          <span class="label">Location:</span> <span class="value">{{ printer.location || 'Unknown' }}</span>
+          <span class="label">Location:</span> <span class="value"
+            [title]="printer.sys_location ? 'SNMP Location: ' + printer.sys_location : ''">{{ printer.location ||
+            'Unknown' }}</span>
         </div>
         <div class="info-row">
           <span class="label">Status:</span> <span class="value">{{ printer.status }}</span>
@@ -71,6 +86,7 @@
             <th>Name</th>
             <th>IP Address</th>
             <th>Model</th>
+            <th>Type</th>
             <th>Location</th>
             <th>Actions</th>
           </tr>
@@ -78,15 +94,24 @@
         <tbody>
           <tr *ngFor="let printer of filteredPrinters">
             <td>
-              <div class="status-indicator" [ngClass]="printer.status.toLowerCase()"></div>
+              <div class="status-indicator" [ngClass]="printer.status.toLowerCase()"
+                [title]="getStatusTooltip(printer)"></div>
             </td>
             <td>{{ printer.name }}</td>
-            <td>{{ printer.ip_address }}</td>
+            <td [class.mismatch-text]="isDnsMismatch(printer)"
+              [title]="isDnsMismatch(printer) ? 'DNS resolves to ' + printer.resolved_ip : ''">
+              {{ printer.ip_address }}
+            </td>
             <td>{{ printer.model || 'Unknown' }}</td>
-            <td>{{ printer.location || 'Unknown' }}</td>
+            <td>{{ getPrinterTypeName(printer) }}</td>
+            <td [title]="printer.sys_location ? 'SNMP Location: ' + printer.sys_location : ''">{{ printer.location ||
+              'Unknown' }}</td>
             <td class="list-actions">
               <button class="icon-btn" (click)="scanPrinter(printer, 'snmp')" title="Scan SNMP">📟</button>
               <button class="icon-btn" (click)="scanPrinter(printer, 'web')" title="Scan Web">🌐</button>
+              <button class="icon-btn" (click)="viewCrawl(printer)" title="View Last Web Crawl"
+                [disabled]="!printer.last_web_crawl">📄</button>
+              <button class="icon-btn" (click)="viewLogs(printer)" title="History">📜</button>
               <button class="icon-btn" (click)="startEdit(printer)" title="Edit">✏️</button>
               <button class="icon-btn danger" (click)="deletePrinter(printer.id)" title="Delete">🗑️</button>
             </td>
@@ -148,13 +173,59 @@
         <label>Printer Type</label>
         <select [(ngModel)]="activePrinter.printer_type_id" [disabled]="!filteredPrinterTypes.length">
           <option [ngValue]="undefined">Select Type</option>
-          <option *ngFor="let t of filteredPrinterTypes" [value]="t.id">{{ t.name }} ({{ t.protocol }})</option>
+          <option *ngFor="let t of filteredPrinterTypes" [value]="t.id">{{ t.name }} ({{ t.probes?.join(', ') || 'no
+            probes' }})
+          </option>
         </select>
       </div>
 
       <div class="modal-actions">
         <button class="btn-secondary" (click)="editingPrinter ? cancelEdit() : closeAddModal()">Cancel</button>
         <button class="btn-primary" (click)="editingPrinter ? saveEdit() : createPrinter()">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- HISTORY MODAL -->
+  <div class="modal-overlay" *ngIf="showLogs" (click)="closeLogs()">
+    <div class="modal glass-panel log-modal" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h2>History: {{ currentPrinterForLogs?.name }}</h2>
+        <button class="close-btn" (click)="closeLogs()">×</button>
+      </div>
+      <div class="modal-body log-container">
+        <div *ngIf="!selectedPrinterLogs.length" class="empty-logs">No history available yet.</div>
+        <div class="log-list">
+          <div *ngFor="let log of selectedPrinterLogs" class="log-item">
+            <div class="log-time">{{ log.timestamp | date:'short' }}</div>
+            <div class="log-content">
+              <span class="log-type">{{ log.event_type.replace('_', ' ') }}:</span>
+              <span class="log-msg">{{ log.message }}</span>
+              <div class="log-values" *ngIf="log.old_value !== null || log.new_value !== null">
+                <span class="old">{{ log.old_value || 'None' }}</span> ➔ <span class="new">{{ log.new_value }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" (click)="closeLogs()">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Web Crawl Modal -->
+  <div class="modal-overlay" *ngIf="showCrawl" (click)="closeCrawl()">
+    <div class="modal glass-panel crawl-modal" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h2>Last Web Crawl Content</h2>
+        <button class="close-btn" (click)="closeCrawl()">×</button>
+      </div>
+      <div class="modal-body">
+        <pre class="crawl-content">{{ currentCrawlContent }}</pre>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-secondary" (click)="closeCrawl()">Close</button>
       </div>
     </div>
   </div>

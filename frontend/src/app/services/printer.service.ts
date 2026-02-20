@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { Printer } from '../models/printer.model';
+import { Printer, ScanResponse } from '../models/printer.model';
 
 @Injectable({
     providedIn: 'root'
@@ -31,8 +31,8 @@ export class PrinterService {
         return this.http.delete<Printer>(`${this.apiUrl}/${id}`);
     }
 
-    scanPrinter(id: number, protocol: string = 'snmp'): Observable<Printer> {
-        return this.http.post<Printer>(`${this.apiUrl}/${id}/scan?protocol=${protocol}`, {});
+    scanPrinter(id: number, protocol: string = 'snmp'): Observable<ScanResponse> {
+        return this.http.post<ScanResponse>(`${this.apiUrl}/${id}/scan?protocol=${protocol}`, {});
     }
 
     detectPrinter(ip_address: string): Observable<any> {
@@ -41,5 +41,9 @@ export class PrinterService {
 
     resolveHostname(hostname: string): Observable<{ ip_address: string }> {
         return this.http.post<{ ip_address: string }>(`${this.apiUrl}/resolve`, { hostname });
+    }
+
+    getPrinterLogs(id: number): Observable<any[]> {
+        return this.http.get<any[]>(`${this.apiUrl}/${id}/logs`);
     }
 }

@@ -9,54 +9,10 @@
     </div>
 
     <div class="glass-panel main-panel">
-        <div class="tabs">
-            <button class="tab-btn" [class.active]="activeTab === 'vendors'"
-                (click)="setActiveTab('vendors')">Vendors</button>
-            <button class="tab-btn" [class.active]="activeTab === 'printer-types'"
-                (click)="setActiveTab('printer-types')">Printer Types</button>
+        <div class="tabs" style="display: none;">
+            <button class="tab-btn active">Printer Types</button>
         </div>
 
-        <!-- VENDORS TAB -->
-        <div *ngIf="activeTab === 'vendors'" class="tab-content fade-in">
-            <div class="section-header">
-                <h2>Manage Vendors</h2>
-            </div>
-
-            <div class="form-row">
-                <input [(ngModel)]="newVendorName" placeholder="New Vendor Name" class="input-field">
-                <button class="btn-primary" (click)="createVendor()">Add Vendor</button>
-            </div>
-
-            <div class="list-container">
-                <div *ngFor="let vendor of vendors" class="list-item glass-panel"
-                    [class.editing]="editingVendorId === vendor.id">
-                    <!-- Display Mode -->
-                    <ng-container *ngIf="editingVendorId !== vendor.id">
-                        <div class="item-content">
-                            <span class="item-name">{{ vendor.name }}</span>
-                            <span class="item-id">ID: {{ vendor.id }}</span>
-                        </div>
-                        <div class="item-actions">
-                            <button class="icon-btn xs" (click)="startEditVendor(vendor)" title="Edit">✏️</button>
-                            <button class="icon-btn xs danger" (click)="deleteVendor(vendor.id)"
-                                title="Delete">🗑️</button>
-                        </div>
-                    </ng-container>
-
-                    <!-- Edit Mode -->
-                    <ng-container *ngIf="editingVendorId === vendor.id">
-                        <div class="edit-row">
-                            <input [(ngModel)]="editVendorName" class="input-field">
-                            <div class="item-actions">
-                                <button class="icon-btn xs success" (click)="saveEditVendor(vendor.id)"
-                                    title="Save">✅</button>
-                                <button class="icon-btn xs" (click)="cancelEditVendor()" title="Cancel">❌</button>
-                            </div>
-                        </div>
-                    </ng-container>
-                </div>
-            </div>
-        </div>
 
         <!-- PRINTER TYPES TAB -->
         <div *ngIf="activeTab === 'printer-types'" class="tab-content fade-in">
@@ -82,12 +38,15 @@
                     <input [(ngModel)]="newPrinterType.name" placeholder="e.g. LaserJet 400" class="input-field">
                 </div>
 
-                <div class="form-group protocol-select">
-                    <label>Protocol</label>
-                    <select [(ngModel)]="newPrinterType.protocol" class="input-field">
-                        <option value="SNMP">SNMP</option>
-                        <option value="WEB">WEB</option>
-                    </select>
+                <div class="form-group full-width">
+                    <label>Probes (Monitoring Methods)</label>
+                    <div class="probe-checkboxes">
+                        <label *ngFor="let probe of availableProbes" class="checkbox-item">
+                            <input type="checkbox" [checked]="isProbeEnabled(probe.id)"
+                                (change)="toggleProbe(probe.id)">
+                            <span>{{ probe.label }}</span>
+                        </label>
+                    </div>
                 </div>
 
                 <div class="form-group full-width">
@@ -112,7 +71,9 @@
                         <span class="item-vendor" *ngIf="type.vendor">({{ type.vendor.name }})</span>
                     </div>
                     <div class="item-details">
-                        <span class="badge" [ngClass]="type.protocol.toLowerCase()">{{ type.protocol }}</span>
+                        <div class="probe-badges">
+                            <span *ngFor="let p of type.probes" class="badge" [ngClass]="p.toLowerCase()">{{ p }}</span>
+                        </div>
                         <div class="item-actions">
                             <button class="icon-btn xs" (click)="startEditPrinterType(type)" title="Edit">✏️</button>
                             <button class="icon-btn xs danger" (click)="deletePrinterType(type.id)"

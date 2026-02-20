@@ -17,12 +17,21 @@ export class PrinterListComponent implements OnInit {
     printers: Printer[] = [];
     isLoading = false;
     editingPrinter: Printer | null = null;
+    showDeleteConfirm = false;
+    showLogs = false;
+    selectedPrinterLogs: any[] = [];
+    currentPrinterForLogs: any = null;
+    showCrawl = false;
+    currentCrawlContent = '';
+    printerToDeleteId: number | null = null;
     newPrinter: Partial<Printer> = {};
     activePrinter: Printer | Partial<Printer> = {};
     selectedVendorId: number | undefined;
-    viewMode: 'grid' | 'list' = 'grid';
+    viewMode: 'grid' | 'list' = 'list';
     searchTerm: string = '';
     showAddModal = false;
+    notifications: { id: number, message: string, type: 'success' | 'error' | 'info' }[] = [];
+    private nextNotificationId = 0;
 
     // Master Data
     vendors: Vendor[] = [];
@@ -54,14 +63,24 @@ export class PrinterListComponent implements OnInit {
 
     loadMasterData(): void {
         this.masterDataService.getVendors().subscribe(v => this.vendors = v);
-        this.masterDataService.getPrinterTypes().subscribe(t => this.printerTypes = t);
+        this.masterDataService.getPrinterTypes().subscribe(t => {
+            this.printerTypes = t;
+            // Only update filtered if we aren't already editing/adding which handles its own filtering
+            if (!this.showAddModal && !this.editingPrinter) {
+                this.filteredPrinterTypes = t;
+            }
+        });
     }
 
     onVendorChange(vendorId: any): void {
-        // Cast to number if needed
-        const vId = Number(vendorId);
+        const vId = vendorId === 'undefined' || vendorId === undefined || vendorId === null ? undefined : Number(vendorId);
         this.selectedVendorId = vId;
-        this.filteredPrinterTypes = this.printerTypes.filter(pt => pt.vendor_id === vId);
+
+        if (vId) {
+            this.filteredPrinterTypes = this.printerTypes.filter(pt => pt.vendor_id === vId);
+        } else {
+            this.filteredPrinterTypes = this.printerTypes;
+        }
 
         // Reset printer type if it doesn't belong to new vendor
         const currentPrinter = this.activePrinter;
@@ -95,6 +114,7 @@ export class PrinterListComponent implements OnInit {
             next: (data) => {
                 this.printers = data;
                 this.isLoading = false;
+                this.checkDnsMismatches();
             },
             error: (err) => {
                 console.error('Error loading printers', err);
@@ -105,19 +125,40 @@ export class PrinterListComponent implements OnInit {
 
     scanPrinter(printer: Printer, protocol: string): void {
         this.isLoading = true;
+        this.showNotification(`Starting ${protocol} scan for ${printer.ip_address}...`, 'info');
+
         this.printerService.scanPrinter(printer.id, protocol).subscribe({
-            next: (updatedPrinter) => {
+            next: (response) => {
+                const updatedPrinter = response.printer;
                 const index = this.printers.findIndex(p => p.id === updatedPrinter.id);
                 if (index !== -1) {
-                    this.printers[index] = updatedPrinter;
+                    this.printers[index] = { ...this.printers[index], ...updatedPrinter };
+                    this.printers = [...this.printers];
                 }
                 this.isLoading = false;
+
+                if (response.reached) {
+                    this.showNotification(`${protocol} scan successful for ${printer.name}!`, 'success');
+                } else {
+                    this.showNotification(`${protocol} scan completed, but device unreachable (Offline).`, 'error');
+                }
             },
             error: (err) => {
                 console.error('Error scanning printer', err);
                 this.isLoading = false;
+                this.showNotification(`${protocol} scan failed due to a system error.`, 'error');
             }
         });
+    }
+
+    showNotification(message: string, type: 'success' | 'error' | 'info'): void {
+        const id = this.nextNotificationId++;
+        this.notifications.push({ id, message, type });
+
+        // Auto-remove after 4 seconds
+        setTimeout(() => {
+            this.notifications = this.notifications.filter(n => n.id !== id);
+        }, 4000);
     }
 
     deletePrinter(id: number): void {
@@ -138,7 +179,7 @@ export class PrinterListComponent implements OnInit {
         if (vendorId) {
             this.filteredPrinterTypes = this.printerTypes.filter(pt => pt.vendor_id === vendorId);
         } else {
-            this.filteredPrinterTypes = [];
+            this.filteredPrinterTypes = this.printerTypes;
         }
     }
 
@@ -166,7 +207,7 @@ export class PrinterListComponent implements OnInit {
         this.newPrinter = {};
         this.activePrinter = this.newPrinter;
         this.selectedVendorId = undefined;
-        this.filteredPrinterTypes = [];
+        this.filteredPrinterTypes = this.printerTypes; // Show all types until vendor is picked
         this.showAddModal = true;
     }
 
@@ -236,6 +277,59 @@ export class PrinterListComponent implements OnInit {
         });
     }
 
+    checkDnsMismatches(): void {
+        this.printers.forEach(printer => {
+            if (printer.name) {
+                this.printerService.resolveHostname(printer.name).subscribe({
+                    next: (result) => {
+                        printer.resolved_ip = result.ip_address;
+                    },
+                    error: () => {
+                        printer.resolved_ip = undefined;
+                    }
+                });
+            }
+        });
+    }
+
+    isDnsMismatch(printer: Printer): boolean {
+        return !!(printer.resolved_ip && printer.ip_address !== printer.resolved_ip);
+    }
+
+    viewLogs(printer: any): void {
+        this.currentPrinterForLogs = printer;
+        this.printerService.getPrinterLogs(printer.id).subscribe({
+            next: (logs) => {
+                this.selectedPrinterLogs = logs;
+                this.showLogs = true;
+            },
+            error: (err) => {
+                console.error('Error fetching logs', err);
+                alert('Could not fetch history logs.');
+            }
+        });
+    }
+
+    closeLogs(): void {
+        this.showLogs = false;
+        this.selectedPrinterLogs = [];
+        this.currentPrinterForLogs = null;
+    }
+
+    viewCrawl(printer: Printer): void {
+        if (printer.last_web_crawl) {
+            this.currentCrawlContent = printer.last_web_crawl.content;
+            this.showCrawl = true;
+        } else {
+            alert('No web crawl data available for this printer.');
+        }
+    }
+
+    closeCrawl(): void {
+        this.showCrawl = false;
+        this.currentCrawlContent = '';
+    }
+
     createPrinter(): void {
         console.log('createPrinter called', this.activePrinter);
         const printer = this.activePrinter as Partial<Printer>;
@@ -261,5 +355,12 @@ export class PrinterListComponent implements OnInit {
 
     setViewMode(mode: 'grid' | 'list'): void {
         this.viewMode = mode;
+    }
+
+    getStatusTooltip(printer: Printer): string {
+        const status = `Status: ${printer.status}`;
+        const time = printer.last_updated ? new Date(printer.last_updated).toLocaleString() : 'Never';
+        const protocol = printer.last_protocol || 'None';
+        return `${status}\nLast Scan: ${time} via ${protocol}`;
     }
 }

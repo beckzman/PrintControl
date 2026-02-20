@@ -57,39 +57,20 @@ def update_printer(printer_id: int, printer: schemas.PrinterUpdate, db: Session 
         raise HTTPException(status_code=404, detail="Printer not found")
     return db_printer
 
-from protocols import snmp, web
+@app.get("/printers/{printer_id}/logs", response_model=List[schemas.PrinterLog])
+def read_printer_logs(printer_id: int, db: Session = Depends(get_db)):
+    return crud.get_printer_logs(db, printer_id=printer_id)
 
-@app.post("/printers/{printer_id}/scan", response_model=schemas.Printer)
-def scan_printer(printer_id: int, protocol: str = "snmp", db: Session = Depends(get_db)):
-    db_printer = crud.get_printer(db, printer_id=printer_id)
-    if not db_printer:
+from protocols import snmp, web, ping, dns, scanner
+import scheduler
+import asyncio
+
+@app.post("/printers/{printer_id}/scan", response_model=schemas.ScanResponse)
+def scan_printer(printer_id: int, protocol: str = None, db: Session = Depends(get_db)):
+    updated_printer, reached = scanner.update_printer_status(db, printer_id, forced_protocol=protocol)
+    if not updated_printer:
         raise HTTPException(status_code=404, detail="Printer not found")
-    
-    # Determine protocol and config
-    scan_protocol = protocol.lower()
-    discovery_config = {}
-    
-    if db_printer.printer_type:
-        scan_protocol = db_printer.printer_type.protocol.lower()
-        if db_printer.printer_type.discovery_config:
-            discovery_config = db_printer.printer_type.discovery_config
-
-    if scan_protocol == "snmp":
-        # Pass discovery_config to snmp scan if needed (e.g. custom OID)
-        # For now, keeping it simple as before, but updated logic would go here
-        data = snmp.scan_printer(db_printer.ip_address)
-    elif scan_protocol == "web":
-        data = web.scan_printer(db_printer.ip_address, config=discovery_config)
-    else:
-        raise HTTPException(status_code=400, detail=f"Unsupported protocol: {scan_protocol}")
-    
-    update_data = schemas.PrinterUpdate(
-        model=data.get("model"),
-        location=data.get("location"),
-        status=data.get("status")
-    )
-    updated_printer = crud.update_printer(db, printer_id, update_data)
-    return updated_printer
+    return {"printer": updated_printer, "reached": reached}
 
 @app.delete("/printers/{printer_id}")
 def delete_printer(printer_id: int, db: Session = Depends(get_db)):
@@ -149,6 +130,11 @@ def delete_printer_type(printer_type_id: int, db: Session = Depends(get_db)):
     crud.delete_printer_type(db, printer_type_id)
     return {"message": "Printer Type deleted"}
 
+@app.on_event("startup")
+async def startup_event():
+    # Start background status updates
+    asyncio.create_task(scheduler.start_status_updates())
+
 # --- Detection Endpoint ---
 from protocols import ping, snmp, web, dns
 
@@ -175,7 +161,7 @@ def detect_printer(data: dict):
         "model": None,
         "vendor_id": None,
         "status": "Offline",
-        "protocol": None
+        "probes": []
     }
 
     # 1. Ping
@@ -191,7 +177,7 @@ def detect_printer(data: dict):
         if snmp_data and snmp_data.get("model") and "Generic" not in snmp_data.get("model"):
              result["model"] = snmp_data["model"]
              result["status"] = snmp_data.get("status", "Ready")
-             result["protocol"] = "SNMP"
+             result["probes"] = ["ping", "snmp"]
     except Exception as e:
         print(f"SNMP Detect failed: {e}")
 
@@ -202,7 +188,7 @@ def detect_printer(data: dict):
             if web_data and web_data.get("model") and "Unknown" not in web_data.get("model"):
                 result["model"] = web_data["model"]
                 result["status"] = web_data.get("status", result["status"])
-                result["protocol"] = "Web"
+                result["probes"] = ["ping", "web"]
         except Exception as e:
             print(f"Web Detect failed: {e}")
 
