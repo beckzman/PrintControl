@@ -20,35 +20,30 @@ export interface PrinterType {
   providedIn: 'root'
 })
 export class MasterDataService {
-  private apiUrl = 'http://127.0.0.1:8000'; // Using 127.0.0.1 as backend port
+  // Use localhost so backend binding to 0.0.0.0 or localhost works reliably in dev
+  private apiUrl = 'http://localhost:8000';
 
   constructor(private http: HttpClient) { }
 
   getVendors(): Observable<Vendor[]> {
-    return this.http.get<Vendor[]>(`${this.apiUrl}/vendors/`);
+    return this.http.get<Vendor[]>(`${this.apiUrl}/vendors`);
   }
 
   createVendor(name: string): Observable<Vendor> {
-    return this.http.post<Vendor>(`${this.apiUrl}/vendors/`, { name });
+    return this.http.post<Vendor>(`${this.apiUrl}/vendors`, { name });
   }
 
   getPrinterTypes(): Observable<PrinterType[]> {
-    return this.http.get<PrinterType[]>(`${this.apiUrl}/printer-types/`);
+    return this.http.get<PrinterType[]>(`${this.apiUrl}/printer-types`);
   }
 
   createPrinterType(type: Partial<PrinterType>): Observable<PrinterType> {
-    return this.http.post<PrinterType>(`${this.apiUrl}/printer-types/`, type);
+    return this.http.post<PrinterType>(`${this.apiUrl}/printer-types`, type);
   }
 
   // --- Update & Delete Methods ---
 
   updateVendor(id: number, vendor: Partial<Vendor>): Observable<Vendor> {
-    // Note: Backend might need an update endpoint, but for now we'll assume standard REST if implemented, 
-    // or we might need to add it to backend. 
-    // Wait, I only implemented create and get in backend for Vendors.
-    // I need to check backend functionality first. 
-    // Checking crud.py previously... I only saw get_vendor, get_vendors, create_vendor.
-    // I need to add Update/Delete to backend first! 
     return this.http.put<Vendor>(`${this.apiUrl}/vendors/${id}`, vendor);
   }
 

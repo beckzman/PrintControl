@@ -7,7 +7,8 @@ import { Printer, ScanResponse } from '../models/printer.model';
     providedIn: 'root'
 })
 export class PrinterService {
-    private apiUrl = 'http://127.0.0.1:8000/printers';
+    // Use localhost to match backend binding
+    private apiUrl = 'http://localhost:8000/printers';
 
     constructor(private http: HttpClient) { }
 
