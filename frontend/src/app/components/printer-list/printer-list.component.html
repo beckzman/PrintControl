@@ -47,10 +47,11 @@
       <div class="card-body">
         <div class="info-row">
           <span class="label">IP:</span>
-          <span class="value" [class.mismatch]="isDnsMismatch(printer)"
-            [title]="isDnsMismatch(printer) ? 'DNS resolves to ' + printer.resolved_ip : ''">
+          <a class="value ip-link" [class.mismatch]="isDnsMismatch(printer)"
+            [title]="isDnsMismatch(printer) ? 'DNS resolves to ' + printer.resolved_ip : 'Open in browser'"
+            [href]="'http://' + printer.ip_address" target="_blank" rel="noopener">
             {{ printer.ip_address }}
-          </span>
+          </a>
         </div>
         <div class="info-row">
           <span class="label">Model:</span> <span class="value" [title]="printer.sys_description || ''">{{ printer.model
@@ -98,9 +99,12 @@
                 [title]="getStatusTooltip(printer)"></div>
             </td>
             <td>{{ printer.name }}</td>
-            <td [class.mismatch-text]="isDnsMismatch(printer)"
-              [title]="isDnsMismatch(printer) ? 'DNS resolves to ' + printer.resolved_ip : ''">
-              {{ printer.ip_address }}
+            <td>
+              <a class="ip-link" [class.mismatch-text]="isDnsMismatch(printer)"
+                [title]="isDnsMismatch(printer) ? 'DNS resolves to ' + printer.resolved_ip : 'Open in browser'"
+                [href]="'http://' + printer.ip_address" target="_blank" rel="noopener">
+                {{ printer.ip_address }}
+              </a>
             </td>
             <td>{{ printer.model || 'Unknown' }}</td>
             <td>{{ getPrinterTypeName(printer) }}</td>
