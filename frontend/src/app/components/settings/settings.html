@@ -8,19 +8,63 @@
         </div>
     </div>
 
-    <div class="glass-panel main-panel">
-        <div class="tabs" style="display: none;">
-            <button class="tab-btn active">Printer Types</button>
-        </div>
+    <div class="settings-layout">
 
-
-        <!-- PRINTER TYPES TAB -->
-        <div *ngIf="activeTab === 'printer-types'" class="tab-content fade-in">
+        <!-- ===== VENDORS ===== -->
+        <div class="glass-panel section-panel">
             <div class="section-header">
-                <h2>Manage Printer Types</h2>
+                <h2>Vendors</h2>
+                <span class="section-count">{{ vendors.length }}</span>
             </div>
 
-            <!-- Printer Type Form (Add/Edit) -->
+            <!-- Add Vendor -->
+            <div class="inline-add-row">
+                <input
+                    class="input-field"
+                    [(ngModel)]="newVendorName"
+                    placeholder="New vendor name…"
+                    (keyup.enter)="createVendor()">
+                <button class="btn-primary" (click)="createVendor()" [disabled]="!newVendorName.trim()">
+                    + Add
+                </button>
+            </div>
+
+            <!-- Vendor List -->
+            <div class="list-container">
+                <div *ngIf="!vendors.length" class="empty-hint">No vendors yet.</div>
+
+                <div *ngFor="let v of vendors" class="list-item glass-panel">
+                    <!-- Normal row -->
+                    <ng-container *ngIf="editingVendorId !== v.id">
+                        <div class="item-main">
+                            <span class="item-name">{{ v.name }}</span>
+                        </div>
+                        <div class="item-actions">
+                            <button class="icon-btn xs" (click)="startEditVendor(v)" title="Edit">✏️</button>
+                            <button class="icon-btn xs danger" (click)="deleteVendor(v.id)" title="Delete">🗑️</button>
+                        </div>
+                    </ng-container>
+
+                    <!-- Edit row -->
+                    <ng-container *ngIf="editingVendorId === v.id">
+                        <div class="edit-row">
+                            <input class="input-field" [(ngModel)]="editVendorName" (keyup.enter)="saveEditVendor(v.id)">
+                            <button class="icon-btn xs success" (click)="saveEditVendor(v.id)" title="Save">✓</button>
+                            <button class="icon-btn xs" (click)="cancelEditVendor()" title="Cancel">✗</button>
+                        </div>
+                    </ng-container>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===== PRINTER TYPES ===== -->
+        <div class="glass-panel section-panel">
+            <div class="section-header">
+                <h2>Printer Types</h2>
+                <span class="section-count">{{ printerTypes.length }}</span>
+            </div>
+
+            <!-- Printer Type Form -->
             <div class="form-grid glass-panel edit-panel" [class.editing-mode]="editingTypeId !== null">
                 <div class="form-title" *ngIf="editingTypeId">✏️ Editing Printer Type (ID: {{ editingTypeId }})</div>
                 <div class="form-title" *ngIf="!editingTypeId">➕ Add New Printer Type</div>
@@ -28,7 +72,9 @@
                 <div class="form-group vendor-select">
                     <label>Vendor</label>
                     <select [(ngModel)]="newPrinterType.vendor_id" class="input-field">
-                        <option [ngValue]="undefined" disabled selected>Select Vendor</option>
+                        <option [ngValue]="undefined" disabled selected>
+                            {{ vendors.length ? 'Select Vendor' : '— Add a vendor first —' }}
+                        </option>
                         <option *ngFor="let v of vendors" [value]="v.id">{{ v.name }}</option>
                     </select>
                 </div>
@@ -51,7 +97,7 @@
 
                 <div class="form-group full-width">
                     <label>Discovery Config (JSON)</label>
-                    <textarea [(ngModel)]="newPrinterType.discovery_config" rows="5" class="input-field mono"
+                    <textarea [(ngModel)]="newPrinterType.discovery_config" rows="4" class="input-field mono"
                         placeholder='{"oid": "1.3.6..."}'></textarea>
                     <div class="error-msg" *ngIf="configError">{{ configError }}</div>
                 </div>
@@ -62,8 +108,10 @@
                 </div>
             </div>
 
+            <!-- Printer Type List -->
             <div class="list-container">
-                <div class="list-header">Existing Types</div>
+                <div *ngIf="!printerTypes.length" class="empty-hint">No printer types yet.</div>
+
                 <div *ngFor="let type of printerTypes" class="list-item glass-panel"
                     [class.active-edit]="editingTypeId === type.id">
                     <div class="item-main">
@@ -83,5 +131,6 @@
                 </div>
             </div>
         </div>
+
     </div>
 </div>

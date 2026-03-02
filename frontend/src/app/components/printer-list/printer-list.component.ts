@@ -127,11 +127,11 @@ export class PrinterListComponent implements OnInit {
         });
     }
 
-    scanPrinter(printer: Printer, protocol: string): void {
+    scanPrinter(printer: Printer): void {
         this.isLoading = true;
-        this.showNotification(`Starting ${protocol} scan for ${printer.ip_address}...`, 'info');
+        this.showNotification(`Scan gestartet für ${printer.name}...`, 'info');
 
-        this.printerService.scanPrinter(printer.id, protocol).subscribe({
+        this.printerService.scanPrinter(printer.id).subscribe({
             next: (response) => {
                 const updatedPrinter = response.printer;
                 const index = this.printers.findIndex(p => p.id === updatedPrinter.id);
@@ -142,15 +142,15 @@ export class PrinterListComponent implements OnInit {
                 this.isLoading = false;
 
                 if (response.reached) {
-                    this.showNotification(`${protocol} scan successful for ${printer.name}!`, 'success');
+                    this.showNotification(`Scan erfolgreich: ${printer.name} → ${updatedPrinter.status}`, 'success');
                 } else {
-                    this.showNotification(`${protocol} scan completed, but device unreachable (Offline).`, 'error');
+                    this.showNotification(`${printer.name} nicht erreichbar (Offline).`, 'error');
                 }
             },
             error: (err) => {
                 console.error('Error scanning printer', err);
                 this.isLoading = false;
-                this.showNotification(`${protocol} scan failed due to a system error.`, 'error');
+                this.showNotification(`Scan fehlgeschlagen für ${printer.name}.`, 'error');
             }
         });
     }

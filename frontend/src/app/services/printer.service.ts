@@ -32,8 +32,11 @@ export class PrinterService {
         return this.http.delete<Printer>(`${this.apiUrl}/${id}`);
     }
 
-    scanPrinter(id: number, protocol: string = 'snmp'): Observable<ScanResponse> {
-        return this.http.post<ScanResponse>(`${this.apiUrl}/${id}/scan?protocol=${protocol}`, {});
+    scanPrinter(id: number, protocol?: string): Observable<ScanResponse> {
+        const url = protocol
+            ? `${this.apiUrl}/${id}/scan?protocol=${protocol}`
+            : `${this.apiUrl}/${id}/scan`;
+        return this.http.post<ScanResponse>(url, {});
     }
 
     detectPrinter(ip_address: string): Observable<any> {
