@@ -21,6 +21,7 @@
         </button>
       </div>
       <a routerLink="/settings" class="icon-btn" title="Settings">⚙️</a>
+      <button class="btn-import" (click)="openImportModal()">↑ Import</button>
       <button class="btn-primary" (click)="openAddModal()">+ Add Printer</button>
     </div>
   </div>
@@ -210,6 +211,49 @@
       </div>
       <div class="modal-footer">
         <button class="btn btn-secondary" (click)="closeLogs()">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Import Modal -->
+  <div class="modal-overlay" *ngIf="showImportModal" (click)="closeImportModal()">
+    <div class="modal glass-panel import-modal" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h2>Drucker importieren</h2>
+        <button class="close-btn" (click)="closeImportModal()">×</button>
+      </div>
+
+      <div class="import-hint">
+        <strong>Format:</strong> eine Zeile pro Drucker &nbsp;·&nbsp; <code>name, ip_address [, model, location]</code>
+        <br>
+        <span class="hint-example">Beispiel: drucker01, 192.168.1.10, HP LaserJet, Lager</span>
+      </div>
+
+      <textarea
+        class="import-textarea"
+        [(ngModel)]="importText"
+        placeholder="drucker01, 192.168.1.10&#10;drucker02, 192.168.1.11, Zebra ZT410, Halle B&#10;# Zeilen mit # werden ignoriert"
+        rows="10"
+        [disabled]="isImporting">
+      </textarea>
+
+      <!-- Results -->
+      <div class="import-results" *ngIf="importResults.length">
+        <div *ngFor="let r of importResults" class="import-result-row" [ngClass]="r.status">
+          <span class="result-icon">
+            {{ r.status === 'created' ? '✓' : r.status === 'skipped' ? '–' : '✗' }}
+          </span>
+          <span class="result-name">{{ r.name }}</span>
+          <span class="result-ip">{{ r.ip_address }}</span>
+          <span class="result-msg">{{ r.status === 'created' ? 'Erstellt' : r.reason }}</span>
+        </div>
+      </div>
+
+      <div class="modal-actions">
+        <button class="btn-secondary" (click)="closeImportModal()">Schließen</button>
+        <button class="btn-primary" (click)="runImport()" [disabled]="isImporting || !importText.trim()">
+          {{ isImporting ? 'Importiere...' : 'Importieren' }}
+        </button>
       </div>
     </div>
   </div>

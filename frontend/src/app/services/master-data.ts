@@ -20,8 +20,8 @@ export interface PrinterType {
   providedIn: 'root'
 })
 export class MasterDataService {
-  // Use localhost so backend binding to 0.0.0.0 or localhost works reliably in dev
-  private apiUrl = 'http://localhost:8000';
+  // Use relative path for proxy
+  private apiUrl = '/api';
 
   constructor(private http: HttpClient) { }
 

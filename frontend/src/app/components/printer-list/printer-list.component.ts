@@ -30,6 +30,10 @@ export class PrinterListComponent implements OnInit {
     viewMode: 'grid' | 'list' = 'list';
     searchTerm: string = '';
     showAddModal = false;
+    showImportModal = false;
+    importText = '';
+    importResults: { name: string; ip_address: string; status: string; reason?: string }[] = [];
+    isImporting = false;
     notifications: { id: number, message: string, type: 'success' | 'error' | 'info' }[] = [];
     private nextNotificationId = 0;
 
@@ -355,6 +359,54 @@ export class PrinterListComponent implements OnInit {
 
     setViewMode(mode: 'grid' | 'list'): void {
         this.viewMode = mode;
+    }
+
+    openImportModal(): void {
+        this.importText = '';
+        this.importResults = [];
+        this.showImportModal = true;
+    }
+
+    closeImportModal(): void {
+        this.showImportModal = false;
+        if (this.importResults.some(r => r.status === 'created')) {
+            this.loadPrinters();
+        }
+    }
+
+    runImport(): void {
+        const lines = this.importText.split('\n').map(l => l.trim()).filter(l => l && !l.startsWith('#'));
+        const printers = lines.map(line => {
+            const parts = line.split(',').map(p => p.trim());
+            return {
+                name: parts[0] || '',
+                ip_address: parts[1] || '',
+                model: parts[2] || undefined,
+                location: parts[3] || undefined,
+            };
+        }).filter(p => p.name && p.ip_address);
+
+        if (!printers.length) {
+            this.showNotification('Keine gültigen Zeilen gefunden.', 'error');
+            return;
+        }
+
+        this.isImporting = true;
+        this.importResults = [];
+        this.printerService.importPrinters(printers).subscribe({
+            next: (results) => {
+                this.importResults = results;
+                this.isImporting = false;
+                const created = results.filter(r => r.status === 'created').length;
+                const skipped = results.filter(r => r.status === 'skipped').length;
+                const errors = results.filter(r => r.status === 'error').length;
+                this.showNotification(`Import: ${created} erstellt, ${skipped} übersprungen, ${errors} Fehler`, created > 0 ? 'success' : 'info');
+            },
+            error: () => {
+                this.isImporting = false;
+                this.showNotification('Import fehlgeschlagen.', 'error');
+            }
+        });
     }
 
     getStatusTooltip(printer: Printer): string {

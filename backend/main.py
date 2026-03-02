@@ -5,8 +5,6 @@ import crud, models, schemas
 from database import SessionLocal, engine
 from fastapi.middleware.cors import CORSMiddleware
 
-models.Base.metadata.create_all(bind=engine)
-
 app = FastAPI(title="Printer Management API")
 
 # CORS configuration
@@ -137,6 +135,21 @@ async def startup_event():
 
 # --- Detection Endpoint ---
 from protocols import ping, snmp, web, dns
+
+@app.post("/printers/import")
+def import_printers(printers: List[schemas.PrinterCreate], db: Session = Depends(get_db)):
+    results = []
+    for p in printers:
+        existing = crud.get_printer_by_ip(db, ip_address=p.ip_address)
+        if existing:
+            results.append({"name": p.name, "ip_address": p.ip_address, "status": "skipped", "reason": "IP already exists"})
+        else:
+            try:
+                created = crud.create_printer(db=db, printer=p)
+                results.append({"name": created.name, "ip_address": created.ip_address, "status": "created"})
+            except Exception as e:
+                results.append({"name": p.name, "ip_address": p.ip_address, "status": "error", "reason": str(e)})
+    return results
 
 @app.post("/printers/resolve")
 def resolve_printer(data: dict):

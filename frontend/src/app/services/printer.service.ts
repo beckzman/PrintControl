@@ -7,8 +7,8 @@ import { Printer, ScanResponse } from '../models/printer.model';
     providedIn: 'root'
 })
 export class PrinterService {
-    // Use localhost to match backend binding
-    private apiUrl = 'http://localhost:8000/printers';
+    // Use relative path for proxy
+    private apiUrl = '/api/printers';
 
     constructor(private http: HttpClient) { }
 
@@ -46,5 +46,9 @@ export class PrinterService {
 
     getPrinterLogs(id: number): Observable<any[]> {
         return this.http.get<any[]>(`${this.apiUrl}/${id}/logs`);
+    }
+
+    importPrinters(printers: { name: string; ip_address: string; model?: string; location?: string }[]): Observable<any[]> {
+        return this.http.post<any[]>(`${this.apiUrl}/import`, printers);
     }
 }

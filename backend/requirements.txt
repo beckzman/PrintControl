@@ -6,4 +6,6 @@ python-multipart
 alembic
 pytest
 httpx
+requests
+beautifulsoup4
 

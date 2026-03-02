@@ -1,0 +1,28 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    volumes:
+      - printcontrol-data:/app/data
+    ports:
+      - "8000:8000"
+    environment:
+      # Store the database inside the persistent volume block
+      - DATABASE_URL=sqlite:////app/data/printers.db
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+volumes:
+  printcontrol-data:
