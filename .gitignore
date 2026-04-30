@@ -1,24 +1,75 @@
+```
+# Database files
+*.db
+
 # Python
-venv/
 __pycache__/
 *.pyc
-.pytest_cache/
-backend/printers.db
-backend/uvicorn.log
-
-# Node / Angular
-node_modules/
-dist/
-.angular/
-frontend/ng.log
-
-# IDEs and OS
-.vscode/
-.idea/
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+.venv/
+.ENV
+.python-version
+*.pot
+*.pyc
+*.pyo
+*.pyd
+*.so
+.Python
+env/
+venv/
+.venv/
+.ENV
+.python-version
+*.pot
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.log
+*.tmp
+*.swp
+*~
 .DS_Store
 Thumbs.db
 
-# Environments
+# Frontend
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+dist/
+build/
+coverage/
+*.min.js
+*.min.css
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Environment
 .env
-.env.*
-uvicorn.log
+.env.local
+*.env
+*.env.*
+
+# Logs
+*.log
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+```

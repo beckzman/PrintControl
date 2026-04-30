@@ -1,6 +1,7 @@
 from sqlalchemy.orm import Session
 import crud, schemas
 from protocols import snmp, web, ping
+import asyncio
 
 def update_printer_status(db: Session, printer_id: int, forced_protocol: str = None):
     """
@@ -86,3 +87,97 @@ def update_printer_status(db: Session, printer_id: int, forced_protocol: str = N
 
     updated_printer = crud.update_printer(db, printer_id, schemas.PrinterUpdate(**results))
     return updated_printer, (probe_success or (is_online if forced_protocol == 'ping' else False) if forced_protocol else probe_success or is_online)
+
+async def update_printer_status_async(db: Session, printer_id: int, forced_protocol: str = None):
+    """
+    Async version of update_printer_status to avoid blocking the event loop.
+    Uses asyncio.gather to run probes concurrently where possible.
+    """
+    db_printer = crud.get_printer(db, printer_id=printer_id)
+    if not db_printer:
+        return None, False
+    
+    enabled_probes = ["ping"]
+    discovery_config = {}
+    
+    if db_printer.printer_type:
+        enabled_probes = db_printer.printer_type.probes or []
+        if db_printer.printer_type.discovery_config:
+            discovery_config = db_printer.printer_type.discovery_config
+
+    results = {
+        "status": db_printer.status,
+        "model": db_printer.model,
+        "location": db_printer.location
+    }
+    
+    is_online = True
+    probes_to_run = [forced_protocol] if forced_protocol else enabled_probes
+
+    # 1. Check Ping first (must complete before other probes)
+    if "ping" in probes_to_run:
+        is_online = await ping.ping_host_async(db_printer.ip_address)
+        if not is_online and not forced_protocol:
+            results["status"] = "Offline"
+            updated_printer = crud.update_printer(db, printer_id, schemas.PrinterUpdate(**results))
+            return updated_printer, False
+        elif is_online:
+            results["status"] = "Online"
+
+    # 2. Run SNMP and Web probes concurrently
+    probe_success = False
+    last_protocol = "Ping" if is_online else None
+    snmp_done = False
+    web_done = False
+    
+    tasks = []
+    if "snmp" in probes_to_run:
+        tasks.append(("snmp", snmp.scan_printer_async(db_printer.ip_address)))
+    if "web" in probes_to_run:
+        tasks.append(("web", web.scan_printer_async(db_printer.ip_address, config=discovery_config)))
+    
+    if tasks:
+        completed = await asyncio.gather(*[task[1] for task in tasks], return_exceptions=True)
+        
+        for i, result in enumerate(completed):
+            probe_name = tasks[i][0]
+            
+            if isinstance(result, Exception):
+                print(f"{probe_name.upper()} Probe failed for {db_printer.ip_address}: {result}")
+                continue
+            
+            if probe_name == "snmp" and result and result.get("status") != "Unknown":
+                results["status"] = result.get("status")
+                results["model"] = result.get("model") or results["model"]
+                results["location"] = result.get("location") or results["location"]
+                results["sys_location"] = result.get("sys_location")
+                results["sys_description"] = result.get("sys_description")
+                probe_success = True
+                last_protocol = "SNMP"
+                snmp_done = True
+                
+            elif probe_name == "web" and result and result.get("status") != "Unknown":
+                results["status"] = result.get("status")
+                results["model"] = result.get("model") or results["model"]
+                results["location"] = result.get("location") or results["location"]
+                probe_success = True
+                last_protocol = "Web"
+                web_done = True
+                
+                # Save web crawl content
+                if result.get("html_content"):
+                    crud.save_web_crawl(db, printer_id, result["html_content"])
+
+    # Fallback status refinement
+    if not probe_success and is_online:
+        results["status"] = "Online"
+        last_protocol = "Ping"
+    elif not is_online and not probe_success and not forced_protocol:
+        results["status"] = "Offline"
+        last_protocol = None
+
+    results["last_protocol"] = last_protocol
+
+    updated_printer = crud.update_printer(db, printer_id, schemas.PrinterUpdate(**results))
+    success = probe_success or (is_online if forced_protocol == 'ping' else False) if forced_protocol else probe_success or is_online
+    return updated_printer, success

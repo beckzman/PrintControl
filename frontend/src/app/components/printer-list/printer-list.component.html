@@ -72,7 +72,9 @@
       </div>
 
       <div class="card-footer">
-        <button class="btn-scan" (click)="scanPrinter(printer)">Scan</button>
+        <button class="btn-scan" (click)="scanPrinter(printer)" [disabled]="scanningPrinterId === printer.id">
+          {{ scanningPrinterId === printer.id ? 'Scanning...' : 'Scan' }}
+        </button>
       </div>
     </div>
   </div>
@@ -111,7 +113,9 @@
             <td [title]="printer.sys_location ? 'SNMP Location: ' + printer.sys_location : ''">{{ printer.location ||
               'Unknown' }}</td>
             <td class="list-actions">
-              <button class="icon-btn" (click)="scanPrinter(printer)" title="Scan">📡</button>
+              <button class="icon-btn" (click)="scanPrinter(printer)" title="Scan" [disabled]="scanningPrinterId === printer.id">
+                {{ scanningPrinterId === printer.id ? '⏳' : '📡' }}
+              </button>
               <button class="icon-btn" (click)="viewCrawl(printer)" title="View Last Web Crawl"
                 [disabled]="!printer.last_web_crawl">📄</button>
               <button class="icon-btn" (click)="viewLogs(printer)" title="History">📜</button>

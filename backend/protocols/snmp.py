@@ -1,5 +1,6 @@
 import subprocess
 import re
+import asyncio
 
 def scan_printer(ip_address: str):
     """
@@ -50,3 +51,21 @@ def scan_printer(ip_address: str):
         print(f"SNMP error: {e}")
 
     return result
+
+async def scan_printer_async(ip_address: str):
+    """
+    Async version of scan_printer to avoid blocking the event loop.
+    """
+    try:
+        loop = asyncio.get_event_loop()
+        return await loop.run_in_executor(None, scan_printer, ip_address)
+    except Exception as e:
+        print(f"Async SNMP error: {e}")
+        return {
+            "model": None,
+            "status": "Unknown",
+            "location": "Unknown",
+            "sys_description": None,
+            "sys_location": None,
+            "sys_name": None
+        }

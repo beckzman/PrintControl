@@ -1,6 +1,7 @@
 import requests
 from bs4 import BeautifulSoup
 import re
+import asyncio
 
 def scan_printer(ip_address: str, config: dict = None):
     """
@@ -86,3 +87,18 @@ def scan_printer(ip_address: str, config: dict = None):
         result["model"] = "Unknown Printer (Web available)"
     
     return result
+
+async def scan_printer_async(ip_address: str, config: dict = None):
+    """
+    Async version of scan_printer to avoid blocking the event loop.
+    """
+    try:
+        loop = asyncio.get_event_loop()
+        return await loop.run_in_executor(None, scan_printer, ip_address, config)
+    except Exception as e:
+        print(f"Async Web scan error: {e}")
+        return {
+            "model": None,
+            "status": "Online",
+            "location": "Unknown"
+        }
