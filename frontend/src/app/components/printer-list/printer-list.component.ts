@@ -16,6 +16,7 @@ import { Printer } from '../../models/printer.model';
 export class PrinterListComponent implements OnInit {
     printers: Printer[] = [];
     isLoading = false;
+    scanningPrinterId: number | null = null;
     editingPrinter: Printer | null = null;
     showDeleteConfirm = false;
     showLogs = false;
@@ -128,7 +129,7 @@ export class PrinterListComponent implements OnInit {
     }
 
     scanPrinter(printer: Printer): void {
-        this.isLoading = true;
+        this.scanningPrinterId = printer.id;
         this.showNotification(`Scan gestartet für ${printer.name}...`, 'info');
 
         this.printerService.scanPrinter(printer.id).subscribe({
@@ -139,7 +140,7 @@ export class PrinterListComponent implements OnInit {
                     this.printers[index] = { ...this.printers[index], ...updatedPrinter };
                     this.printers = [...this.printers];
                 }
-                this.isLoading = false;
+                this.scanningPrinterId = null;
 
                 if (response.reached) {
                     this.showNotification(`Scan erfolgreich: ${printer.name} → ${updatedPrinter.status}`, 'success');
@@ -149,7 +150,7 @@ export class PrinterListComponent implements OnInit {
             },
             error: (err) => {
                 console.error('Error scanning printer', err);
-                this.isLoading = false;
+                this.scanningPrinterId = null;
                 this.showNotification(`Scan fehlgeschlagen für ${printer.name}.`, 'error');
             }
         });

@@ -64,8 +64,8 @@ import scheduler
 import asyncio
 
 @app.post("/printers/{printer_id}/scan", response_model=schemas.ScanResponse)
-def scan_printer(printer_id: int, protocol: str = None, db: Session = Depends(get_db)):
-    updated_printer, reached = scanner.update_printer_status(db, printer_id, forced_protocol=protocol)
+async def scan_printer(printer_id: int, protocol: str = None, db: Session = Depends(get_db)):
+    updated_printer, reached = await scanner.update_printer_status_async(db, printer_id, forced_protocol=protocol)
     if not updated_printer:
         raise HTTPException(status_code=404, detail="Printer not found")
     return {"printer": updated_printer, "reached": reached}
@@ -164,7 +164,7 @@ def resolve_printer(data: dict):
     return {"ip_address": ip}
 
 @app.post("/printers/detect")
-def detect_printer(data: dict):
+async def detect_printer(data: dict):
     ip_address = data.get("ip_address")
     if not ip_address:
         raise HTTPException(status_code=400, detail="IP Address required")
@@ -177,16 +177,16 @@ def detect_printer(data: dict):
         "probes": []
     }
 
-    # 1. Ping
-    if ping.ping_host(ip_address):
+    # 1. Ping (async)
+    if await ping.ping_host_async(ip_address):
         result["online"] = True
         result["status"] = "Online" # Default if nothing else found
     else:
         return result # Early return if offline
 
-    # 2. SNMP (Try public community)
+    # 2. SNMP (Try public community) - async
     try:
-        snmp_data = snmp.scan_printer(ip_address)
+        snmp_data = await snmp.scan_printer_async(ip_address)
         if snmp_data and snmp_data.get("model") and "Generic" not in snmp_data.get("model"):
              result["model"] = snmp_data["model"]
              result["status"] = snmp_data.get("status", "Ready")
@@ -194,10 +194,10 @@ def detect_printer(data: dict):
     except Exception as e:
         print(f"SNMP Detect failed: {e}")
 
-    # 3. Web (Fallback or refinement)
+    # 3. Web (Fallback or refinement) - async
     if not result["model"]:
         try:
-            web_data = web.scan_printer(ip_address)
+            web_data = await web.scan_printer_async(ip_address)
             if web_data and web_data.get("model") and "Unknown" not in web_data.get("model"):
                 result["model"] = web_data["model"]
                 result["status"] = web_data.get("status", result["status"])
